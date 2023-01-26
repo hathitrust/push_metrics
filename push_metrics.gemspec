@@ -39,4 +39,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", "~> 3.0"
   spec.add_development_dependency "standardrb"
   spec.add_development_dependency "faraday", "~> 2.7"
+  spec.add_development_dependency "simplecov"
+  spec.add_development_dependency "simplecov-lcov"
 end
