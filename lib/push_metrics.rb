@@ -12,7 +12,7 @@ class PushMetrics < SimpleDelegator
     marker: Milemarker.new(batch_size: batch_size),
     registry: Prometheus::Client.registry,
     job_name: File.basename($PROGRAM_NAME),
-    pushgateway_endpoint: ENV["PUSHGATEWAY"],
+    pushgateway_endpoint: ENV["PUSHGATEWAY"] || "http://localhost:9091",
     success_interval: ENV["JOB_SUCCESS_INTERVAL"],
     pushgateway: Prometheus::Client::Push.new(job: job_name, gateway: pushgateway_endpoint))
 

@@ -144,11 +144,11 @@ RSpec.describe PushMetrics do
 
   describe "integration test" do
     before(:each) do
-      puts "wiping metrics"
-      Faraday.put("#{ENV["PUSHGATEWAY"]}/api/v1/admin/wipe")
+      Faraday.put("#{pm_endpoint}/api/v1/admin/wipe")
     end
 
-    let(:metrics) { Faraday.get("#{ENV["PUSHGATEWAY"]}/metrics").body }
+    let(:pm_endpoint) { ENV["PUSHGATEWAY"] || "http://localhost:9091" }
+    let(:metrics) { Faraday.get("#{pm_endpoint}/metrics").body }
     let(:pm_marker) { described_class.new(batch_size, registry: Prometheus::Client::Registry.new) }
 
     describe "#on_batch" do
