@@ -2,6 +2,7 @@
 
 require "milemarker"
 require "delegate"
+require "prometheus/client/push"
 
 # Adds prometheus push exporter to Milemarker that tracks:
 #   - number of items processed

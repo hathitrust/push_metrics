@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "push_metrics"
-require "prometheus/client/push"
 require "faraday"
 
 RSpec.describe PushMetrics do
