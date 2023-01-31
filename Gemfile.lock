@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    push_metrics (0.0.1)
+    push_metrics (0.9.0)
       milemarker (~> 1.0)
       prometheus-client (~> 4.0)
 

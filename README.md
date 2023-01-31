@@ -26,8 +26,7 @@ push gateway after each `batch_size` records and on completion.
 ```ruby
 require 'push_metrics';
 
-batch_size = 1000
-marker = PushMetrics.new(batch_size)
+marker = PushMetrics.new(batch_size: 1000)
 
 File.open(input_file).each do |line|
   do_whatever_needs_doing(line)
@@ -73,12 +72,22 @@ along with its defaults.
 
 ### Configuring `milemarker`
 
-You can pass in your own `milemarker` instance:
+PushMetrics is a subclass of Milemarker, so you can pass in constructor
+arguments for Milemarker as well:
 
 ```ruby
-milemarker = Milemarker.new(logger: my_custom_logger)
-pushmetrics = PushMetrics.new(marker: milemarker)
+pushmetrics = PushMetrics.new(logger: my_custom_logger)
 ```
+
+### Using another Milemarker implementation
+
+If you want to use a different Milemarker (e.g. Milemarker::Structured), you can do that:
+
+```ruby
+pushmetrics = PushMetrics(Milemarker::Structured).new
+```
+
+🤯 thanks to the magic of dynamic class definition in Ruby...
 
 See also [milemarker](https://github.com/hathitrust/milemarker) for additional options and configuration.
 
