@@ -1,77 +1,94 @@
 # frozen_string_literal: true
 
 require "milemarker"
-require "delegate"
 require "prometheus/client/push"
 
-# Adds prometheus push exporter to Milemarker that tracks:
+# Adds prometheus push exporter to Milemarker or similar interface that tracks:
 #   - number of items processed
 #   - time running so far
 #   - success time
-class PushMetrics < SimpleDelegator
-  def initialize(batch_size,
-    marker: Milemarker.new(batch_size: batch_size),
-    registry: Prometheus::Client.registry,
-    job_name: File.basename($PROGRAM_NAME),
-    pushgateway_endpoint: ENV["PUSHGATEWAY"] || "http://localhost:9091",
-    success_interval: ENV["JOB_SUCCESS_INTERVAL"],
-    pushgateway: Prometheus::Client::Push.new(job: job_name, gateway: pushgateway_endpoint))
+#
+# This is a bit unusual syntax, but it allows us to have:
+#   * PushMetrics is a regular class that inherits from Milemarker, just in a
+#     bit of an unusual way
+#
+#   * PushMetrics(SomeOtherClass) is a new anonymous class that inherits from
+#     SomeOtherClass - so we can use another Milemarker implementation, including
+#     a stubbed one, while still being able to use the callbacks here as
+#     overrides to the methods in SomeOtherClass.
 
-    @marker = marker
-    @pushgateway = pushgateway
-    @registry = registry
+def PushMetrics(superclass)
+  Class.new(superclass) do
+    def initialize(
+      registry: Prometheus::Client.registry,
+      job_name: File.basename($PROGRAM_NAME),
+      pushgateway_endpoint: ENV["PUSHGATEWAY"] || "http://localhost:9091",
+      success_interval: ENV["JOB_SUCCESS_INTERVAL"],
+      pushgateway: Prometheus::Client::Push.new(job: job_name, gateway: pushgateway_endpoint),
+      **kwargs
+    )
 
-    super(@marker)
+      super(**kwargs)
 
-    if success_interval
-      success_interval_metric.set(success_interval.to_i)
-    end
+      @pushgateway = pushgateway
+      @registry = registry
 
-    update_metrics
-  end
+      if success_interval
+        success_interval_metric.set(success_interval.to_i)
+      end
 
-  def final_line
-    last_success_metric.set(Time.now.to_i)
-    update_metrics
-    marker.final_line
-  end
-
-  def on_batch
-    marker.on_batch do |m|
-      yield m
       update_metrics
     end
-  end
 
-  private
+    def final_line
+      last_success_metric.set(Time.now.to_i)
+      update_metrics
+      super
+    end
 
-  attr_reader :marker, :pushgateway, :registry, :metrics
+    def on_batch
+      super do |m|
+        yield m
+        update_metrics
+      end
+    end
 
-  def update_metrics
-    duration_metric.set(@marker.total_seconds_so_far)
-    records_processed_metric.set(@marker.count)
+    private
 
-    pushgateway.add(registry)
-  end
+    attr_reader :pushgateway, :registry, :metrics
 
-  def duration_metric
-    @duration_metric ||= register_metric(:job_duration_seconds, docstring: "Time spent running job in seconds")
-  end
+    def update_metrics
+      duration_metric.set(total_seconds_so_far)
+      records_processed_metric.set(count)
 
-  def last_success_metric
-    @last_success_metric ||= register_metric(:job_last_success, docstring: "Last Unix time when job successfully completed")
-  end
+      pushgateway.add(registry)
+    end
 
-  def records_processed_metric
-    @records_processed ||= register_metric(:job_records_processed, docstring: "Records processed by job")
-  end
+    def duration_metric
+      @duration_metric ||= register_metric(:job_duration_seconds, docstring: "Time spent running job in seconds")
+    end
 
-  def success_interval_metric
-    @success_interval ||= register_metric(:job_expected_success_interval, docstring: "Maximum expected time in seconds between job completions")
-  end
+    def last_success_metric
+      @last_success_metric ||= register_metric(:job_last_success, docstring: "Last Unix time when job successfully completed")
+    end
 
-  def register_metric(name, **kwargs)
-    registry.get(name) ||
-      Prometheus::Client::Gauge.new(name, **kwargs).tap { |m| registry.register(m) }
+    def records_processed_metric
+      @records_processed ||= register_metric(:job_records_processed, docstring: "Records processed by job")
+    end
+
+    def success_interval_metric
+      @success_interval ||= register_metric(:job_expected_success_interval, docstring: "Maximum expected time in seconds between job completions")
+    end
+
+    def register_metric(name, **kwargs)
+      registry.get(name) ||
+        Prometheus::Client::Gauge.new(name, **kwargs).tap { |m| registry.register(m) }
+    end
   end
 end
+
+# Constants (including classes) are in a different namespace from functions, so
+# we can make a PushMetrics class whose superclass is Milemarker be the
+# "default" PushMetrics class.
+
+PushMetrics = PushMetrics(Milemarker)

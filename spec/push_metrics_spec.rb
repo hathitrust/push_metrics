@@ -3,6 +3,56 @@
 require "push_metrics"
 require "faraday"
 
+# stub a method that counts the number of times it is called, and returns that
+# via a _calls method, e.g. count_calls(whatever) will create a #whatever
+# method and a #whatever_calls method that returns the time #whatever was
+# called.
+
+def count_calls(name, rval = nil)
+  define_method(name) do
+    calls = instance_variable_get("@#{name}_calls")
+    calls ||= 0
+    calls += 1
+    instance_variable_set("@#{name}_calls", calls)
+    rval
+  end
+
+  define_method("#{name}_calls") do
+    instance_variable_get("@#{name}_calls")
+  end
+end
+
+class StubMarker
+  attr_accessor :stub_seconds_so_far, :stub_records_so_far, :incr_calls
+
+  def initialize(stub_records_so_far:,
+    stub_seconds_so_far:,
+    **kwargs)
+    @stub_records_so_far = stub_records_so_far
+    @stub_seconds_so_far = stub_seconds_so_far
+  end
+
+  def final_line
+    true
+  end
+
+  def total_seconds_so_far
+    @stub_seconds_so_far
+  end
+
+  def count
+    @stub_records_so_far
+  end
+
+  def on_batch
+    yield self
+  end
+
+  count_calls :incr
+  count_calls :on_batch
+  count_calls :final_line, "final line"
+end
+
 RSpec.describe PushMetrics do
   let(:batch_size) { rand(1..100) }
   let(:seconds_so_far) { rand(100) }
@@ -10,28 +60,22 @@ RSpec.describe PushMetrics do
   let(:success_interval) { 24 * 60 * 60 * rand(7) }
 
   describe "unit tests" do
-    let(:marker) do
-      instance_double(Milemarker,
-        final_line: true,
-        total_seconds_so_far: seconds_so_far,
-        count: records_so_far).tap do |d|
-        allow(d).to receive(:on_batch).and_yield(d)
-      end
-    end
-
     let(:pushgateway) { instance_double(Prometheus::Client::Push, add: true) }
     let(:metrics) { Prometheus::Client::Registry.new }
+    let(:marker) { StubMarker }
 
     let(:params) do
       {
-        marker: marker,
+        batch_size: batch_size,
         pushgateway: pushgateway,
-        registry: metrics
+        registry: metrics,
+        stub_seconds_so_far: seconds_so_far,
+        stub_records_so_far: records_so_far
       }
     end
 
     let(:pm_marker) do
-      described_class.new(batch_size, **params)
+      PushMetrics(marker).new(**params)
     end
 
     describe "#initialize" do
@@ -59,7 +103,7 @@ RSpec.describe PushMetrics do
       end
 
       it "sets success interval metric with constructor param" do
-        described_class.new(batch_size, **params.merge({success_interval: success_interval}))
+        PushMetrics(marker).new(**params.merge({success_interval: success_interval}))
 
         expect(metrics.get(:job_expected_success_interval).get).to eq(success_interval)
       end
@@ -72,23 +116,20 @@ RSpec.describe PushMetrics do
     end
 
     describe "#incr" do
-      it "delegates to marker" do
-        expect(marker).to receive(:incr)
+      it "calls superclass method" do
         pm_marker.incr
+        expect(pm_marker.incr_calls).to be 1
       end
     end
 
     describe "#final_line" do
-      it "delegates to milemarker" do
-        expect(marker).to receive(:final_line)
-
+      it "calls superclass method" do
         pm_marker.final_line
+        expect(pm_marker.final_line_calls).to be 1
       end
 
-      it "returns what milemarker returns" do
-        allow(marker).to receive(:final_line).and_return("milemarker return")
-
-        expect(pm_marker.final_line).to eq("milemarker return")
+      it "returns what superclass returns" do
+        expect(pm_marker.final_line).to eq("final line")
       end
 
       it "updates the metrics" do
@@ -107,10 +148,9 @@ RSpec.describe PushMetrics do
     end
 
     describe "#on_batch" do
-      it "delegates to marker" do
-        expect(marker).to receive(:on_batch)
-
+      it "calls superclass method" do
         pm_marker.on_batch {}
+        expect(pm_marker.on_batch_calls).to be 1
       end
 
       it "updates the metrics" do
@@ -132,13 +172,6 @@ RSpec.describe PushMetrics do
         expect(metrics.get(:job_last_success)).to be(nil)
       end
     end
-
-    describe "#count" do
-      it "delegates to marker" do
-        expect(marker).to receive(:count)
-        pm_marker.count
-      end
-    end
   end
 
   describe "integration test" do
@@ -148,7 +181,7 @@ RSpec.describe PushMetrics do
 
     let(:pm_endpoint) { ENV["PUSHGATEWAY"] || "http://localhost:9091" }
     let(:metrics) { Faraday.get("#{pm_endpoint}/metrics").body }
-    let(:pm_marker) { described_class.new(batch_size, registry: Prometheus::Client::Registry.new) }
+    let(:pm_marker) { PushMetrics.new(batch_size: batch_size, registry: Prometheus::Client::Registry.new) }
 
     describe "#on_batch" do
       before(:each) do
@@ -178,5 +211,11 @@ RSpec.describe PushMetrics do
       # job_last_success is nonzero
       expect(metrics).to match(/^job_last_success\S* \S+/m)
     end
+  end
+end
+
+RSpec.describe "PushMetric varieties" do
+  it "can subclass Milemarker::Structured" do
+    expect(PushMetrics(Milemarker::Structured).new).to be_a(Milemarker::Structured)
   end
 end
