@@ -212,6 +212,34 @@ RSpec.describe PushMetrics do
       expect(metrics).to match(/^job_last_success\S* \S+/m)
     end
   end
+
+  describe "error handling" do
+    let(:pm_endpoint) { "http://pushgateway.invalid:9091" }
+
+    context "with a logger" do
+      let(:logger) { instance_double Logger, error: nil }
+      let(:pm_marker) {
+        PushMetrics.new(batch_size: batch_size, registry: Prometheus::Client::Registry.new,
+          pushgateway_endpoint: pm_endpoint, logger: logger)
+      }
+
+      it "logs exception" do
+        expect(logger).to receive(:error)
+        pm_marker
+      end
+    end
+
+    context "without a logger" do
+      let(:pm_marker) {
+        PushMetrics.new(batch_size: batch_size, registry: Prometheus::Client::Registry.new,
+          pushgateway_endpoint: pm_endpoint)
+      }
+
+      it "raises StandardError" do
+        expect { pm_marker }.to raise_error(StandardError)
+      end
+    end
+  end
 end
 
 RSpec.describe "PushMetric varieties" do
