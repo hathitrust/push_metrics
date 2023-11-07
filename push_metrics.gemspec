@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name = "push_metrics"
-  spec.version = "0.9.0"
+  spec.version = "0.9.1"
   spec.authors = ["Aaron Elkiss"]
   spec.email = ["aelkiss@umich.edu"]
 
