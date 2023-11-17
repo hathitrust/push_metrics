@@ -235,8 +235,8 @@ RSpec.describe PushMetrics do
           pushgateway_endpoint: pm_endpoint)
       }
 
-      it "raises StandardError" do
-        expect { pm_marker }.to raise_error(StandardError)
+      it "does not raise error" do
+        expect { pm_marker }.not_to raise_error
       end
     end
   end

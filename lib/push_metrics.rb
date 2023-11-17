@@ -64,11 +64,7 @@ def PushMetrics(superclass)
       begin
         pushgateway.add(registry)
       rescue => e
-        if logger
-          logger.error(e.to_s)
-        else
-          raise
-        end
+        logger&.error(e.to_s)
       end
     end
 
