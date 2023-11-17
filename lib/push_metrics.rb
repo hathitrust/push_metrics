@@ -61,7 +61,11 @@ def PushMetrics(superclass)
       duration_metric.set(total_seconds_so_far)
       records_processed_metric.set(count)
 
-      pushgateway.add(registry)
+      begin
+        pushgateway.add(registry)
+      rescue => e
+        logger&.error(e.to_s)
+      end
     end
 
     def duration_metric
