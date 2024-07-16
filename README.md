@@ -4,7 +4,7 @@
 
 A gem for pushing metrics on progress and completion of batch jobs to a
 [Prometheus Pushgateway](https://github.com/prometheus/pushgateway). Uses the
-[milemarker](github.com/hathitrust/milemarker) interface for callbacks to
+[milemarker](https://github.com/hathitrust/milemarker) interface for callbacks to
 report progress.
 
 ## Dependencies
