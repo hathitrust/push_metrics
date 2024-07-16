@@ -67,7 +67,7 @@ or set the `PUSHGATEWAY` environment variable.
 By default, PushMetrics uses the default `Prometheus::Client.registry`. If you
 are using Prometheus for other purposes or wish to set other metrics, you can
 pass in your own registry, or add your metrics to the default
-`Promtheus::Client.registry`. PushMetrics will push those additional metrics
+`Prometheus::Client.registry`. PushMetrics will push those additional metrics
 along with its defaults.
 
 ### Configuring `milemarker`
