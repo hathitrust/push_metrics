@@ -27,7 +27,6 @@ def PushMetrics(superclass)
       pushgateway: Prometheus::Client::Push.new(job: job_name, gateway: pushgateway_endpoint),
       **kwargs
     )
-
       super(**kwargs)
 
       @pushgateway = pushgateway
