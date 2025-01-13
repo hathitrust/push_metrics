@@ -24,7 +24,12 @@ def PushMetrics(superclass)
       job_name: File.basename($PROGRAM_NAME),
       pushgateway_endpoint: ENV["PUSHGATEWAY"] || "http://localhost:9091",
       success_interval: ENV["JOB_SUCCESS_INTERVAL"],
-      pushgateway: Prometheus::Client::Push.new(job: job_name, gateway: pushgateway_endpoint),
+      instance: ENV["JOB_NAMESPACE"],
+      pushgateway: Prometheus::Client::Push.new(
+        job: job_name,
+        gateway: pushgateway_endpoint,
+        grouping_key: {instance: instance}
+      ),
       **kwargs
     )
       super(**kwargs)

@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name = "push_metrics"
-  spec.version = "0.9.1"
+  spec.version = "0.9.2"
   spec.authors = ["Aaron Elkiss"]
   spec.email = ["aelkiss@umich.edu"]
 
@@ -34,6 +34,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "prometheus-client", "~> 4.0"
 
   spec.add_development_dependency "bundler", "~>2.0"
+  spec.add_development_dependency "climate_control"
   spec.add_development_dependency "pry"
   spec.add_development_dependency "rake", "~>13.0"
   spec.add_development_dependency "rspec", "~> 3.0"
