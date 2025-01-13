@@ -10,15 +10,15 @@ require "faraday"
 
 def count_calls(name, rval = nil)
   define_method(name) do
-    calls = instance_variable_get("@#{name}_calls")
+    calls = instance_variable_get(:"@#{name}_calls")
     calls ||= 0
     calls += 1
-    instance_variable_set("@#{name}_calls", calls)
+    instance_variable_set(:"@#{name}_calls", calls)
     rval
   end
 
-  define_method("#{name}_calls") do
-    instance_variable_get("@#{name}_calls")
+  define_method(:"#{name}_calls") do
+    instance_variable_get(:"@#{name}_calls")
   end
 end
 
