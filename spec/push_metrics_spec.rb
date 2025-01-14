@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "push_metrics"
+require "climate_control"
 require "faraday"
 
 # stub a method that counts the number of times it is called, and returns that
@@ -203,6 +204,28 @@ RSpec.describe PushMetrics do
 
       it "by default does not update job_expected_success_interval" do
         expect(metrics).not_to match(/^job_expected_success_interval/m)
+      end
+    end
+
+    describe "instance label" do
+      it "has an empty instance label by default" do
+        pm_marker.on_batch {}
+        expect(metrics).to match(/^job_duration_seconds.*instance=""/m)
+      end
+
+      it "uses instance param if given" do
+        ClimateControl.modify(JOB_NAMESPACE: "some-namespace") do
+          pm = PushMetrics.new(batch_size: batch_size, registry: Prometheus::Client::Registry.new, instance: "override-instance")
+          pm.on_batch {}
+          expect(metrics).to match(/^job_duration_seconds.*instance="override-instance"/m)
+        end
+      end
+
+      it "uses JOB_NAMESPACE env var as instance if given" do
+        ClimateControl.modify(JOB_NAMESPACE: "some-namespace") do
+          pm_marker.on_batch {}
+          expect(metrics).to match(/^job_duration_seconds.*instance="some-namespace"/m)
+        end
       end
     end
 
